@@ -2,31 +2,107 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>LET Platformer</title>
-<style>
-  html,body{margin:0;height:100%;background:#1b1f3b;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
-  #menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:5;background:#1b1f3b}
-  #menu input,#menu button{font-size:20px;padding:10px 14px;border-radius:8px;border:0}
-  #menu button{background:#ffd23f;cursor:pointer}
-  #game{position:fixed;inset:0;display:none}
-  #touch{position:fixed;bottom:16px;left:0;right:0;display:none;justify-content:space-between;padding:0 16px;z-index:4;pointer-events:none}
-  #touch button{pointer-events:auto;width:84px;height:84px;border-radius:50%;border:0;background:rgba(255,255,255,.35);color:#fff;font-size:34px;touch-action:none;user-select:none}
-  #touch .dpad{display:flex;gap:12px}
-</style>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#8FD1FF">
+<title>Mundo LET</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⭐</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div id="menu">
-  <h1>LET Platformer</h1>
-  <input id="name" maxlength="12" placeholder="Tu nombre" autofocus>
-  <button id="play">Jugar</button>
-  <small>Flechas o A/D para moverte, Espacio, W o ↑ para saltar</small>
+
+<!-- ============ LOGIN ============ -->
+<main id="menu" class="screen active" aria-label="Entrar al Mundo LET">
+  <div class="sky-deco" aria-hidden="true">
+    <span class="cloud c1"></span><span class="cloud c2"></span><span class="cloud c3"></span>
+    <span class="float f1">⭐</span><span class="float f2">✏️</span><span class="float f3">🎈</span><span class="float f4">🚀</span><span class="float f5">🧩</span>
+  </div>
+  <div class="menu-card">
+    <header class="brand">
+      <span class="brand-kicker">LET Junior</span>
+      <h1 class="brand-title">Mundo <span>LET</span></h1>
+    </header>
+
+    <div class="menu-grid">
+      <section class="hero" aria-live="polite">
+        <div class="hero-stage">
+          <canvas id="heroChar" width="144" height="162"></canvas>
+          <div class="hero-shadow"></div>
+          <div class="hero-bubble" id="heroBubble">¡Hola! Soy Kiko</div>
+        </div>
+      </section>
+
+      <section class="form">
+        <label class="step" for="name"><b>1</b> ¿Cómo te llamas?</label>
+        <input id="name" maxlength="12" placeholder="Tu nombre" autocomplete="off" spellcheck="false">
+        <div class="step"><b>2</b> Elige tu personaje</div>
+        <div id="chars" class="chars" role="radiogroup" aria-label="Personajes"></div>
+        <button id="play" class="btn btn-primary btn-big">¡A jugar! <span aria-hidden="true">→</span></button>
+        <p class="hint">Flechas o A/D para moverte · Espacio para saltar · E para entrar</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- ============ GAME ============ -->
+<div id="game" class="screen" aria-label="Mundo LET"></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <div class="chip me-chip"><canvas id="meAvatar" width="48" height="54"></canvas><span id="meName"></span></div>
+    <div class="chip star-chip" id="starChip"><span class="star-icon">⭐</span><b id="starCount">0</b></div>
+  </div>
+  <div class="map" id="map" aria-hidden="true"><div class="map-track"></div></div>
+  <div class="hud-right">
+    <div class="chip" id="onlineChip" title="Jugadores conectados">👥 <b id="onlineCount">1</b></div>
+    <button class="icon-btn" id="muteBtn" aria-label="Silenciar">🔊</button>
+    <button class="icon-btn" id="fsBtn" aria-label="Pantalla completa">⛶</button>
+  </div>
+  <div id="status" class="status hidden"></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <button id="interactBtn" class="btn btn-primary interact-btn" aria-hidden="true"><span class="ib-icon"></span><span class="ib-text">¡Entrar!</span></button>
+
+  <div class="emotes" id="emotes"></div>
+
+  <div id="touch" class="touch hidden">
+    <div class="dpad">
+      <button data-k="left" aria-label="Izquierda">◀</button>
+      <button data-k="right" aria-label="Derecha">▶</button>
+    </div>
+    <div class="actions">
+      <button data-k="down" class="small" aria-label="Bajar">▼</button>
+      <button data-k="jump" class="jump" aria-label="Saltar">⤒</button>
+    </div>
+  </div>
 </div>
-<div id="game"></div>
-<div id="touch">
-  <div class="dpad"><button data-k="left">◀</button><button data-k="right">▶</button></div>
-  <button data-k="jump">▲</button>
+
+<!-- ============ MODAL ============ -->
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card">
+    <button class="modal-close" data-close aria-label="Cerrar">✕</button>
+    <div class="modal-head">
+      <div class="modal-icon" id="modalIcon"></div>
+      <div>
+        <span class="wip">🚧 En construcción</span>
+        <h2 id="modalTitle"></h2>
+        <p id="modalSub"></p>
+      </div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" data-close>¡Seguir explorando!</button>
+    </div>
+  </div>
 </div>
+
+<div id="rotate" class="rotate" aria-live="polite"><div class="rotate-phone">📱</div><p>Gira tu teléfono para jugar</p></div>
+
+<div id="wipe" class="wipe" aria-hidden="true"><div class="wipe-logo">Mundo <span>LET</span></div></div>
+
 <script src="/vendor/phaser.min.js"></script>
 <script type="module" src="/main.js"></script>
 </body>
