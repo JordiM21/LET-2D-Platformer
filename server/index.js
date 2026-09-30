@@ -15,6 +15,7 @@ const COLORS = ['#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#42d4f4'
 const app = express();
 app.use(express.static(path.join(ROOT, 'public')));
 app.use('/shared', express.static(path.join(ROOT, 'shared')));
+app.use('/vendor', express.static(path.join(ROOT, 'node_modules/phaser/dist')));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 1024 });
