@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LET Platformer</title>
+<style>
+  html,body{margin:0;height:100%;background:#1b1f3b;color:#fff;font-family:system-ui,sans-serif}
+  #menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+  #menu input,#menu button{font-size:20px;padding:10px 14px;border-radius:8px;border:0}
+  #menu button{background:#ffd23f;cursor:pointer}
+  canvas{display:none;margin:0 auto;background:#87ceeb;image-rendering:pixelated;max-width:100%}
+  #status{position:fixed;top:8px;left:8px;font-size:13px;opacity:.8}
+</style>
+</head>
+<body>
+<div id="menu">
+  <h1>LET Platformer</h1>
+  <input id="name" maxlength="12" placeholder="Tu nombre" autofocus>
+  <button id="play">Jugar</button>
+  <small>Flechas o A/D para moverte, Espacio, W o ↑ para saltar</small>
+</div>
+<canvas id="c" width="960" height="416"></canvas>
+<div id="status"></div>
+<script type="module" src="/main.js"></script>
+</body>
+</html>
