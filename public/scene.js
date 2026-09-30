@@ -9,7 +9,7 @@ const S = 1 / RES;
 const STEP = 1 / 120;          // fixed physics step
 const INTERP_DELAY = 110;      // ms remote players are rendered behind real time
 const GROUND_Y = G.BASE_ROW * TILE;
-const BUILDING_H = { home: 150, plaza: 170, quests: 130, library: 160, arena: 150 };
+const BUILDING_H = { home: 150, plaza: 170, arcade: 140, quests: 130, library: 160, arena: 150 };
 
 function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 const damp = (rate, dt) => 1 - Math.exp(-rate * dt);
@@ -272,6 +272,13 @@ export class WorldScene extends Phaser.Scene {
       this.fxConfetti.explode(24, this.body.x + PLAYER_W / 2, this.body.y);
     };
     this.ui.onModalClose = () => { this.frozen = false; this.jumpLatch = false; this.zoomTo(1); };
+    // coming back from a minigame
+    this.events.on('wake', () => {
+      this.ui.onJump = () => { this.jumpLatch = true; };
+      this.acc = 0; this.frozen = false; this.jumpLatch = false;
+      this.zoomBoost = 1; this.onResize();
+      this.lastSentAt = 0;
+    });
   }
 
   readInput() {
@@ -289,6 +296,7 @@ export class WorldScene extends Phaser.Scene {
   setupNet() {
     const net = this.net;
     net.on('welcome', (m) => {
+      if (m.role === 'teacher') this.me.label.setText(`🍎 ${this.profile.name}`);
       for (const r of this.remotes.values()) r.rig.destroy();
       this.remotes.clear();
       this.sendState(true);
@@ -333,7 +341,7 @@ export class WorldScene extends Phaser.Scene {
       seen.add(p.id);
       let r = this.remotes.get(p.id);
       if (!r) {
-        r = { rig: new Rig(this, this.worldLayer, p.c, p.n, false), buf: [], char: p.c, wasG: true, airVy: 0 };
+        r = { rig: new Rig(this, this.worldLayer, p.c, p.r ? `🍎 ${p.n}` : p.n, false), buf: [], char: p.c, wasG: true, airVy: 0 };
         this.remotes.set(p.id, r);
         this.spawnFx(p.x + PLAYER_W / 2, p.y + PLAYER_H, true);
       }

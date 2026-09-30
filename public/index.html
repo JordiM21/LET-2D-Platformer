@@ -40,6 +40,10 @@
         <div class="step"><b>2</b> Elige tu personaje</div>
         <div id="chars" class="chars" role="radiogroup" aria-label="Personajes"></div>
         <button id="play" class="btn btn-primary btn-big">¡A jugar! <span aria-hidden="true">→</span></button>
+        <div class="teacher-row">
+          <button type="button" id="teacherToggle" class="link-btn">🍎 Soy profe</button>
+          <input id="pin" class="pin hidden" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off" aria-label="PIN de profe">
+        </div>
         <p class="hint">Flechas o A/D para moverte · Espacio para saltar · E para entrar</p>
       </section>
     </div>
@@ -67,16 +71,15 @@
 
   <div class="emotes" id="emotes"></div>
 
-  <div id="touch" class="touch hidden">
-    <div class="dpad">
-      <button data-k="left" aria-label="Izquierda">◀</button>
-      <button data-k="right" aria-label="Derecha">▶</button>
-    </div>
-    <div class="actions">
-      <button data-k="down" class="small" aria-label="Bajar">▼</button>
-      <button data-k="jump" class="jump" aria-label="Saltar">⤒</button>
-    </div>
+</div>
+
+<!-- touch controls live outside the HUD so minigames can use them too -->
+<div id="touch" class="touch hidden" aria-hidden="true">
+  <div class="pad" id="pad">
+    <span class="pad-arrow l">◀</span><span class="pad-arrow r">▶</span>
+    <span class="pad-knob" id="padKnob"></span>
   </div>
+  <button class="jump" id="jumpBtn" aria-label="Saltar"><span>⤒</span></button>
 </div>
 
 <!-- ============ MODAL ============ -->

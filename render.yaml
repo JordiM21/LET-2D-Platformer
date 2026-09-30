@@ -10,3 +10,6 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22
+      # PIN the teacher types on the login screen to open minigame parties. Set it in the Render dashboard.
+      - key: TEACHER_PIN
+        sync: false

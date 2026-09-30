@@ -5,6 +5,7 @@ import { sfx } from './audio.js';
 import { createUI, saveProfile } from './ui.js';
 import { Net } from './net.js';
 import { WorldScene } from './scene.js';
+import { createParty } from './party.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -13,6 +14,15 @@ try { Object.assign(profile, JSON.parse(localStorage.getItem('letWorldProfile'))
 if (!CHAR_BY_ID[profile.char]) profile.char = CHARACTERS[0].id;
 
 const nameInput = $('name');
+const pinInput = $('pin');
+try { pinInput.value = localStorage.getItem('letWorldPin') || ''; } catch { /* private mode */ }
+if (pinInput.value) { pinInput.classList.remove('hidden'); $('teacherToggle').classList.add('on'); }
+$('teacherToggle').onclick = () => {
+  const show = pinInput.classList.toggle('hidden') === false;
+  $('teacherToggle').classList.toggle('on', show);
+  if (show) pinInput.focus(); else pinInput.value = '';
+  sfx.select();
+};
 if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) document.body.classList.add('is-touch');
 nameInput.value = profile.name || '';
 
@@ -76,6 +86,8 @@ async function start(ev) {
   }
   started = true;
   profile.name = sanitizeName(raw);
+  profile.pin = pinInput.classList.contains('hidden') ? '' : pinInput.value.trim();
+  try { localStorage.setItem('letWorldPin', profile.pin); } catch { /* private mode */ }
   saveProfile(profile);
   nameInput.blur();
   sfx.open();
@@ -113,9 +125,11 @@ async function start(ev) {
     await wait(650);
     wipe.className = 'wipe';
   } });
+  createParty({ ui, net, profile, game });
   window.__game = game; // handy for debugging in the console
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 $('play').onclick = start;
 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') start(); });
+pinInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') start(); });

@@ -1,11 +1,64 @@
 // Content for each place's modal. All WIP: real data where we have it, locked cards where we don't yet.
 import { CHARACTERS, POIS } from '/shared/game.js';
 import { drawCharacter, CHAR_BY_ID } from './characters.js';
+import { GAMES, GAME_IDS, LOBBY_SECS } from '/shared/minigames.js';
+
+let pickedGame = GAME_IDS[0], pickedSecs = 30;
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const locked = (icon, title, sub) => `<div class="card locked"><span class="ci">${icon}</span><b>${title}</b><small>${sub}</small></div>`;
 
 export const POI_CONTENT = {
+  arcade: {
+    sub: 'Minijuegos para jugar todos juntos',
+    wip: false,
+    body: (ctx) => {
+      const party = ctx.party?.state, teacher = ctx.party?.isTeacher;
+      const cards = GAME_IDS.map((id) => {
+        const g = GAMES[id];
+        return `<button class="gcard${teacher && !party && id === pickedGame ? ' on' : ''}" data-g="${id}" style="--gc:${g.color}" ${teacher && !party ? '' : 'tabindex="-1"'}>
+          <span class="gc-icon">${g.icon}</span><b>${g.name}</b><span class="gc-mode">${g.mode}</span><small>${g.blurb}</small></button>`;
+      }).join('');
+      let top;
+      if (party) {
+        const g = GAMES[party.game];
+        const member = party.members.some((m) => m.id === ctx.myId);
+        top = `<div class="pstatus" style="--gc:${g.color}"><span class="gc-icon">${g.icon}</span>
+          <div><b>${g.name}</b><small>${party.phase === 'lobby' ? `Abierta · empieza en ${party.left}s · ${party.members.length} jugando` : `En curso · ${party.members.length} jugando`}</small></div>
+          ${party.phase === 'lobby' && !member ? '<button class="btn btn-primary" data-a="join">¡Unirme!</button>' : ''}
+          ${teacher && party.host === ctx.myId ? '<button class="btn" data-a="cancel">Cerrar partida</button>' : ''}</div>`;
+      } else if (teacher) {
+        top = `<div class="popen">
+          <div class="secs"><span>⏱ Tiempo para unirse</span>${LOBBY_SECS.map((s) => `<button class="seg${s === pickedSecs ? ' on' : ''}" data-s="${s}">${s}s</button>`).join('')}</div>
+          <button class="btn btn-primary btn-big" data-a="open">🎉 ¡Abrir partida!</button></div>`;
+      } else {
+        top = '<p class="note">🍎 Cuando el profe abra una partida, te llegará una invitación arriba en la pantalla. ¡Mientras tanto, mira los juegos!</p>';
+      }
+      return `${top}<div><h3 class="sec-title">🕹️ ${teacher && !party ? 'Elige un juego' : 'Juegos'}</h3><div class="gcards">${cards}</div></div>`;
+    },
+    bind: (el, ctx) => {
+      el.querySelectorAll('.gcard').forEach((b) => {
+        b.onclick = () => {
+          if (!ctx.party?.isTeacher || ctx.party.state) return;
+          pickedGame = b.dataset.g;
+          el.querySelectorAll('.gcard').forEach((o) => o.classList.toggle('on', o === b));
+          ctx.sfx.select();
+        };
+      });
+      el.querySelectorAll('.seg').forEach((b) => {
+        b.onclick = () => { pickedSecs = +b.dataset.s; el.querySelectorAll('.seg').forEach((o) => o.classList.toggle('on', o === b)); ctx.sfx.select(); };
+      });
+      el.querySelectorAll('[data-a]').forEach((b) => {
+        b.onclick = () => {
+          const a = b.dataset.a;
+          if (a === 'open') ctx.party.open(pickedGame, pickedSecs);
+          if (a === 'join') { ctx.party.join(); ctx.close(); }
+          if (a === 'cancel') ctx.party.cancel();
+        };
+      });
+    },
+  },
+
   home: {
     sub: 'Tu rincón en el mundo',
     body: (ctx) => `
@@ -64,7 +117,7 @@ export const POI_CONTENT = {
     body: (ctx) => {
       const q = [
         { icon: '⭐', title: 'Coleccionista', sub: 'Recoge 25 estrellas', have: ctx.progress.stars, need: 25, xp: 50 },
-        { icon: '🗺️', title: 'Explorador', sub: 'Descubre los 5 lugares', have: ctx.progress.visited.length, need: POIS.length, xp: 80 },
+        { icon: '🗺️', title: 'Explorador', sub: `Descubre los ${POIS.length} lugares`, have: ctx.progress.visited.length, need: POIS.length, xp: 80 },
         { icon: '👋', title: 'Súper amigo', sub: 'Saluda 10 veces', have: ctx.progress.emotes, need: 10, xp: 30 },
         { icon: '🏆', title: 'A la cima', sub: 'Llega a la Torre de Retos', have: ctx.progress.visited.includes('arena') ? 1 : 0, need: 1, xp: 40 },
       ];

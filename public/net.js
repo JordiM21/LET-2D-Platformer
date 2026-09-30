@@ -16,13 +16,13 @@ export class Net {
     this.ws = ws;
     ws.onopen = () => {
       this.retry = 0;
-      ws.send(JSON.stringify({ t: 'join', name: profile.name, char: profile.char }));
+      ws.send(JSON.stringify({ t: 'join', name: profile.name, char: profile.char, pin: profile.pin || undefined }));
     };
     ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch { return; }
       if (m.t === 'welcome') {
         const again = this.everConnected;
-        this.id = m.id; this.everConnected = true;
+        this.id = m.id; this.role = m.role; this.everConnected = true;
         this.emit('status', 'online');
         this.emit('welcome', { ...m, again });
       } else this.emit(m.t, m);

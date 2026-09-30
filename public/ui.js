@@ -107,6 +107,9 @@ export function createUI(profile) {
   };
   ib.onclick = () => ui.onInteract?.();
 
+  // live-refresh the Sala de Juegos window when the party changes
+  ui.onPartyChange = () => { if (ui.modalOpen && ui.currentPoi?.poi.id === 'arcade') ui.rerenderPoi(); };
+
   // ---- stars
   let starPop;
   ui.collectStar = (sx, sy) => {
@@ -140,21 +143,38 @@ export function createUI(profile) {
     $('emotes').appendChild(b);
   });
 
-  // ---- touch controls
-  if (isTouch) $('touch').classList.remove('hidden');
-  for (const b of $('touch').querySelectorAll('button')) {
-    const k = b.dataset.k;
-    const on = (e) => {
-      e.preventDefault(); b.setPointerCapture?.(e.pointerId);
-      ui.touch[k] = true; b.classList.add('on');
-      if (k === 'jump') ui.onJump?.();
-      try { navigator.vibrate?.(6); } catch { /* unsupported */ }
-    };
-    const off = (e) => { e.preventDefault(); ui.touch[k] = false; b.classList.remove('on'); };
-    b.addEventListener('pointerdown', on);
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, off);
-    b.addEventListener('contextmenu', (e) => e.preventDefault());
-  }
+  // ---- touch controls: slide pad on the left, jump on the right
+  const pad = $('pad'), knob = $('padKnob'), jumpBtn = $('jumpBtn');
+  ui.showTouch = (v) => $('touch').classList.toggle('hidden', !(v && isTouch));
+  ui.showTouch(true);
+  let padId = null;
+  const padMove = (e) => {
+    const r = pad.getBoundingClientRect();
+    const dx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (r.width / 2 - 20)));
+    const dy = e.clientY - (r.top + r.height / 2);
+    ui.touch.left = dx < -0.18; ui.touch.right = dx > 0.18; ui.touch.down = dy > r.height * 0.42;
+    knob.style.transform = `translate(${dx * (r.width / 2 - 34)}px, ${Math.max(-8, Math.min(18, dy * 0.4))}px)`;
+    pad.classList.toggle('left', ui.touch.left); pad.classList.toggle('right', ui.touch.right);
+  };
+  const padEnd = (e) => {
+    if (e.pointerId !== padId) return;
+    padId = null; ui.touch.left = ui.touch.right = ui.touch.down = false;
+    knob.style.transform = ''; pad.classList.remove('active', 'left', 'right');
+  };
+  pad.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); padId = e.pointerId; pad.setPointerCapture?.(e.pointerId);
+    pad.classList.add('active'); padMove(e);
+    try { navigator.vibrate?.(5); } catch { /* unsupported */ }
+  });
+  pad.addEventListener('pointermove', (e) => { if (e.pointerId === padId) { e.preventDefault(); padMove(e); } });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, padEnd);
+  jumpBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); jumpBtn.setPointerCapture?.(e.pointerId);
+    ui.touch.jump = true; jumpBtn.classList.add('on'); ui.onJump?.();
+    try { navigator.vibrate?.(6); } catch { /* unsupported */ }
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) jumpBtn.addEventListener(ev, () => { ui.touch.jump = false; jumpBtn.classList.remove('on'); });
+  for (const el of [pad, jumpBtn]) el.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // ---- modal
   const modal = $('modal');
@@ -169,12 +189,15 @@ export function createUI(profile) {
     $('modalIcon').textContent = poi.icon;
     $('modalTitle').textContent = poi.name;
     $('modalSub').textContent = c.sub;
+    modal.querySelector('.wip').classList.toggle('hidden', c.wip === false);
     const ctx = {
-      ...extra, profile, progress, sfx, isTouch,
+      ...extra, profile, progress, sfx, isTouch, party: ui.party, close: () => ui.closeModal(),
       changeChar: (id) => { profile.char = id; drawMe(); ui.onCharChange?.(id); sfx.select(); saveProfile(profile); },
     };
-    $('modalBody').innerHTML = c.body(ctx);
-    c.bind?.($('modalBody'), ctx);
+    ui.currentPoi = { poi, ctx };
+    const render = () => { $('modalBody').innerHTML = c.body(ctx); c.bind?.($('modalBody'), ctx); };
+    ui.rerenderPoi = render;
+    render();
     modal.classList.remove('hidden', 'closing');
     sfx.open();
     setTimeout(() => modal.querySelector('.modal-close').focus({ preventScroll: true }), 60);
@@ -186,7 +209,7 @@ export function createUI(profile) {
     sfx.close();
     setTimeout(() => {
       modal.classList.add('hidden'); modal.classList.remove('closing');
-      closing = false; ui.modalOpen = false;
+      closing = false; ui.modalOpen = false; ui.currentPoi = null;
       if (nearId) ib.classList.add('show');
       document.activeElement?.blur?.();
       ui.onModalClose?.();

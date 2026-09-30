@@ -14,14 +14,17 @@ for (const poi of POIS) if (poi.row == null) throw new Error(`POI ${poi.id} has 
 
 // 3) two clients see each other, movement relays, teleport cheats are rejected
 const url = `ws://localhost:${process.env.PORT || 3000}/ws`;
-const open = (name, char) => new Promise((res) => {
-  const ws = new WebSocket(url); const last = {};
-  ws.on('open', () => { ws.send(JSON.stringify({ t: 'join', name, char })); res({ ws, last }); });
+const open = (name, char, pin) => new Promise((res) => {
+  const ws = new WebSocket(url); const last = { gstars: 0 };
+  ws.on('open', () => { ws.send(JSON.stringify({ t: 'join', name, char, pin })); res({ ws, last }); });
   ws.on('message', (d) => {
     const m = JSON.parse(d);
     if (m.t === 'state') last.state = m.p;
     if (m.t === 'welcome') last.id = m.id;
     if (m.t === 'pos') last.snapped = true;
+    if (m.t === 'party') last.party = m.p;
+    if (m.t === 'g-start') last.gstart = m;
+    if (m.t === 'g' && m.a === 'star') last.gstars++;
   });
 });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -44,6 +47,26 @@ b.last.snapped = false;
 b.ws.send(JSON.stringify({ t: 's', tp: 1, x: POIS[0].x, y: POIS[0].row * TILE - PLAYER_H, vx: 0, vy: 0, g: 1, f: 1 }));
 await wait(200);
 if (b.last.snapped) throw new Error('respawn teleport rejected');
-a.ws.close(); b.ws.close();
+
+// 4) parties: only the teacher can open one; students join; the game starts and sends frames
+const t = await open('Profe', 'robot', process.env.TEACHER_PIN || '1234');
+await wait(300);
+a.ws.send(JSON.stringify({ t: 'party-open', game: 'stars', secs: 20 }));
+await wait(150);
+if (a.last.party) throw new Error('student opened a party');
+t.ws.send(JSON.stringify({ t: 'party-open', game: 'stars', secs: 20 }));
+await wait(150);
+b.ws.send(JSON.stringify({ t: 'party-join' }));
+await wait(150);
+console.log('lobby:', a.last.party.members.map((m) => m.n).join(', '));
+if (a.last.party.members.length !== 2) throw new Error('join failed');
+t.ws.send(JSON.stringify({ t: 'party-start' }));
+await wait(3800); // 3 s countdown, then stars start falling
+if (!b.last.gstart || !b.last.gstars) throw new Error('game did not start');
+console.log('game started, stars falling:', b.last.gstars);
+t.ws.send(JSON.stringify({ t: 'party-cancel' }));
+await wait(150);
+if (a.last.party !== null) throw new Error('party not closed');
+a.ws.close(); b.ws.close(); t.ws.close();
 console.log('OK');
 process.exit(0);

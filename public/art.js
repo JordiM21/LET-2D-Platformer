@@ -123,6 +123,29 @@ function house(ctx, w, h) {
   }
 }
 
+function arcade(ctx, w, h) {
+  // walls
+  ctx.fillStyle = '#0E8C6E'; rrect(ctx, 14, 50, w - 28, h - 50, 10); ctx.fill();
+  ctx.fillStyle = '#13A889'; rrect(ctx, 18, 54, w - 36, h - 58, 8); ctx.fill();
+  // marquee with bulbs
+  ctx.fillStyle = C.navy; rrect(ctx, 6, 20, w - 12, 40, 14); ctx.fill();
+  ctx.fillStyle = '#FF4F8B'; rrect(ctx, 12, 26, w - 24, 28, 10); ctx.fill();
+  for (let i = 0; i < 12; i++) { ctx.fillStyle = i % 2 ? C.gold : '#FFFFFF'; circ(ctx, 16 + i * ((w - 32) / 11), 22, 3); ctx.fill(); circ(ctx, 16 + i * ((w - 32) / 11), 58, 3); ctx.fill(); }
+  // joystick on the roof
+  ctx.fillStyle = C.navy; rrect(ctx, w / 2 - 18, 10, 36, 12, 5); ctx.fill();
+  ctx.strokeStyle = C.navy; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(w / 2, 12); ctx.lineTo(w / 2 + 6, -2 + 4); ctx.stroke();
+  ctx.fillStyle = '#FF5A5F'; circ(ctx, w / 2 + 7, 3, 6); ctx.fill();
+  // screen window + door
+  ctx.fillStyle = C.navy; rrect(ctx, 26, 72, 44, 36, 6); ctx.fill();
+  ctx.fillStyle = '#58B8F2'; rrect(ctx, 30, 76, 36, 28, 4); ctx.fill();
+  ctx.fillStyle = C.gold; circ(ctx, 42, 90, 4); ctx.fill(); ctx.fillStyle = '#FF5A5F'; ctx.fillRect(50, 86, 10, 8);
+  ctx.fillStyle = C.navy; rrect(ctx, w - 70, 76, 40, h - 76, 16); ctx.fill();
+  ctx.fillStyle = '#3A3370'; rrect(ctx, w - 66, 80, 32, h - 80, 13); ctx.fill();
+  ctx.fillStyle = C.gold; circ(ctx, w - 40, 112, 2.6); ctx.fill();
+  // step
+  ctx.fillStyle = '#E8DCCB'; rrect(ctx, 8, h - 8, w - 16, 8, 3); ctx.fill();
+}
+
 function gazebo(ctx, w, h) {
   // base
   ctx.fillStyle = '#E8DCCB'; rrect(ctx, 14, 146, 212, 24, 6); ctx.fill();
@@ -317,6 +340,7 @@ export function makeArt(scene) {
   mk(scene, 'poi_home', 180, 150, house);
   mk(scene, 'poi_plaza', 240, 170, gazebo);
   mk(scene, 'poi_quests', 124, 130, board);
+  mk(scene, 'poi_arcade', 150, 140, arcade);
   mk(scene, 'poi_library', 210, 160, library);
   mk(scene, 'poi_arena', 210, 150, arena);
 

@@ -76,7 +76,6 @@ plank(46, 54, B - 9);
 // Plaza
 ground(59, 84, B);
 plank(62, 65, B - 3);
-plank(77, 80, B - 3);
 // rolling hills with floating islands
 ground(85, 87, B - 1);
 ground(88, 90, B - 2);
@@ -128,6 +127,7 @@ export function tileAt(c, r) {
 export const POIS = [
   { id: 'home',    name: 'Mi Casa',          icon: '🏠', col: 13,  w: 6, color: '#CA4B15' },
   { id: 'plaza',   name: 'Plaza Central',    icon: '🎪', col: 71,  w: 8, color: '#7B5CFF' },
+  { id: 'arcade',  name: 'Sala de Juegos',   icon: '🎮', col: 81,  w: 5, color: '#13A889' },
   { id: 'quests',  name: 'Tablón de Misiones', icon: '📜', col: 116, w: 5, color: '#F2A516' },
   { id: 'library', name: 'Biblioteca',       icon: '📚', col: 167, w: 7, color: '#2A8BD8' },
   { id: 'arena',   name: 'Torre de Retos',   icon: '🏆', col: 217, w: 7, color: '#E0364F' },
@@ -136,7 +136,7 @@ export const POIS = [
 // Collectible stars: [col, rowAboveSurface]. Placed on the fun routes.
 const STAR_SPOTS = [
   [20, 1], [24, 2], [30, B - 6], [31, B - 7], [32, B - 6], [41, 4], [47, B - 10], [50, B - 11], [53, B - 10],
-  [63, B - 4], [64, B - 4], [78, B - 4], [79, B - 4], [90, B - 7], [91, B - 7], [99, 5], [100, B - 3], [102, 5],
+  [63, B - 4], [64, B - 4], [57, 3], [90, B - 7], [91, B - 7], [99, 5], [100, B - 3], [102, 5],
   [120, 1], [125, 2], [133, B - 4], [138, B - 6], [143, B - 4], [146, 3], [159, B - 6], [160, B - 6],
   [172, 1], [188, 4], [192, B - 9], [194, B - 9], [197, 4], [205, B - 3], [209, B - 10], [204, B - 7],
   [226, B - 6], [236, 1], [250, 1], [256, 2], [270, 1],
@@ -162,7 +162,11 @@ function approach(v, target, delta) {
   return v < target ? Math.min(v + delta, target) : Math.max(v - delta, target);
 }
 
-function hitsSolid(x, y) {
+// A "map" is anything with tileAt(c, r). The world is the default; minigame arenas bring their own.
+export const WORLD_MAP = { tileAt };
+
+function hitsSolid(map, x, y) {
+  const tileAt = map.tileAt;
   const c0 = Math.floor(x / TILE), c1 = Math.floor((x + PLAYER_W - 0.001) / TILE);
   const r0 = Math.floor(y / TILE), r1 = Math.floor((y + PLAYER_H - 0.001) / TILE);
   for (let r = r0; r <= r1; r++)
@@ -174,7 +178,8 @@ function hitsSolid(x, y) {
 }
 
 // First floor crossed when the feet move from prevBottom down to newBottom.
-function findFloor(x, prevBottom, newBottom, dropping) {
+function findFloor(map, x, prevBottom, newBottom, dropping) {
+  const tileAt = map.tileAt;
   const c0 = Math.floor(x / TILE), c1 = Math.floor((x + PLAYER_W - 0.001) / TILE);
   const rStart = Math.ceil((prevBottom - 0.01) / TILE), rEnd = Math.floor(newBottom / TILE);
   for (let r = rStart; r <= rEnd; r++) {
@@ -192,7 +197,7 @@ function findFloor(x, prevBottom, newBottom, dropping) {
 
 // Advance one body by dt with input {left,right,jump,down}. Returns events for juice:
 // {jump, land: impactSpeed, bounce, bump, turn}
-export function stepPlayer(p, input, dt) {
+export function stepPlayer(p, input, dt, map = WORLD_MAP) {
   const ev = {};
   const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
 
@@ -229,7 +234,7 @@ export function stepPlayer(p, input, dt) {
 
   // X axis.
   let nx = p.x + p.vx * dt;
-  if (hitsSolid(nx, p.y)) {
+  if (hitsSolid(map, nx, p.y)) {
     nx = p.vx > 0 ? Math.floor((nx + PLAYER_W) / TILE) * TILE - PLAYER_W : (Math.floor(nx / TILE) + 1) * TILE;
     p.vx = 0;
   }
@@ -241,7 +246,7 @@ export function stepPlayer(p, input, dt) {
   let ny = p.y + p.vy * dt;
   p.onGround = false;
   if (p.vy >= 0) {
-    const floor = findFloor(p.x, prevBottom, ny + PLAYER_H, p.drop > 0);
+    const floor = findFloor(map, p.x, prevBottom, ny + PLAYER_H, p.drop > 0);
     if (floor) {
       ny = floor.y - PLAYER_H;
       if (!wasGround) ev.land = p.vy;
@@ -251,11 +256,11 @@ export function stepPlayer(p, input, dt) {
         p.vy = 0; p.onGround = true; p.groundType = floor.type;
       }
     }
-  } else if (hitsSolid(p.x, ny)) {
+  } else if (hitsSolid(map, p.x, ny)) {
     let nudged = false;
     for (let s = 1; s <= PHYS.cornerNudge && !nudged; s++) {
       for (const d of [s, -s]) {
-        if (!hitsSolid(p.x + d, ny)) { p.x += d; nudged = true; break; }
+        if (!hitsSolid(map, p.x + d, ny)) { p.x += d; nudged = true; break; }
       }
     }
     if (!nudged) {
@@ -268,9 +273,9 @@ export function stepPlayer(p, input, dt) {
 }
 
 // True if a body at (x,y) is standing on something: used to validate respawn teleports.
-export function isStandable(x, y) {
-  if (hitsSolid(x, y)) return false;
-  return !!findFloor(x, y + PLAYER_H, y + PLAYER_H + 1, false);
+export function isStandable(x, y, map = WORLD_MAP) {
+  if (hitsSolid(map, x, y)) return false;
+  return !!findFloor(map, x, y + PLAYER_H, y + PLAYER_H + 1, false);
 }
 
 export function sanitizeName(raw) {

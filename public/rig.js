@@ -1,13 +1,15 @@
 // A character on screen: procedural animation (squash & stretch spring, run cycle, blink, lean).
 // Driven by physics state only, so local and remote players animate identically.
-import { PHYS, EMOTES, TILE, ROWS, tileAt } from '/shared/game.js';
+import { PHYS, EMOTES, TILE, WORLD_MAP, ROWS } from '/shared/game.js';
 import { RES } from './art.js';
 import { BODY_W, BODY_BASE, eyesFor } from './characters.js';
 
 const S = 1 / RES;
 
 export class Rig {
-  constructor(scene, layer, char, name, isMe) {
+  // map: tile map for the ground shadow (the world by default; minigame arenas pass their own)
+  constructor(scene, layer, char, name, isMe, map = WORLD_MAP) {
+    this.map = map; this.rows = map.rows || ROWS;
     this.scene = scene; this.isMe = isMe;
     this.sx = 1; this.sy = 1; this.vsx = 0; this.vsy = 0; // spring state
     this.facing = 1; this.flip = 1; this.lean = 0;
@@ -119,7 +121,7 @@ export class Rig {
     // shadow on the ground below
     const col = Math.floor(x / TILE);
     let gy = null;
-    for (let r = Math.max(0, Math.floor((y - 1) / TILE)); r < ROWS; r++) if (tileAt(col, r)) { gy = r * TILE; break; }
+    for (let r = Math.max(0, Math.floor((y - 1) / TILE)); r < this.rows; r++) if (this.map.tileAt(col, r)) { gy = r * TILE; break; }
     if (gy === null) this.shadow.setVisible(false);
     else {
       const h = Math.max(0, gy - y), f = Math.max(0.25, 1 - h / 220);
