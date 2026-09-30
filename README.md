@@ -1,17 +1,30 @@
-# LET 2D Platformer
+# Mundo LET
 
-Minimal browser multiplayer platformer. Node + `ws` server (authoritative), Phaser 3 client (served from node_modules, no build step).
+Browser multiplayer platformer for LET Junior students. Node + `ws` server, Phaser 3 client (served from node_modules, no build step). All art and sound are generated in code.
 
     npm install
     npm start        # http://localhost:3000
     npm test         # smoke test, needs the server running
 
-Controls: Arrows / A D to move, Space / W / Up to jump.
+Controls: Arrows / A D to move, Space / W / Up to jump (hold for higher), S / Down to drop through wooden planks, E / Enter to enter a place, 1-4 for emotes. Touch devices get on-screen buttons.
 
-- `shared/game.js`: level, physics, collisions (imported by both server and client)
-- `server/index.js`: 60 Hz simulation, 30 Hz snapshots
-- `public/`: name menu (HTML) and Phaser scene: input (keyboard + touch buttons), rendering, camera
-- Art is generated in code (`makeTextures` in `public/main.js`); swap for real sprites with `this.load`
+## How it fits together
+
+- `shared/game.js`: world layout, tile collisions, movement physics, places (POIS), stars, characters. Imported by server and client.
+- `server/index.js`: relays player state at 20 Hz. Each client simulates its own movement (instant response, no input lag); the server rejects impossible moves and snaps the cheater back.
+- `public/main.js`: login screen (name + character) and the wipe transition into the game.
+- `public/scene.js`: the Phaser scene. Fixed 120 Hz physics with render interpolation, camera with look-ahead, parallax, particles, stars, places, ambient life.
+- `public/rig.js`: procedural character animation (squash and stretch spring, run cycle, blinking, emotes). Same code for local and remote players.
+- `public/ui.js` + `public/pois.js`: HUD, touch controls, toasts, and the modal for each place.
+- `public/art.js`, `public/characters.js`, `public/audio.js`: generated art and synth sounds. Replace any texture with a real image by loading it under the same key.
+
+## Tuning the feel
+
+Everything about movement is in `PHYS` in `shared/game.js`: acceleration, coyote time, jump buffering, variable jump height, apex hang, fall speed, bounce pads. The world is built with small helpers (`ground`, `plank`, `block`, `bounce`) in the same file; a full jump clears about 3.5 tiles up and 5 tiles across.
+
+## Places (WIP)
+
+Mi Casa (change character, stats), Plaza Central (who is online), Tablón de Misiones (quests with real progress: stars, places, greetings), Biblioteca (word flip cards with voice), Torre de Retos (challenges, locked). Progress is saved in the browser for now.
 
 ## Deploy on Render (free)
 
@@ -19,5 +32,4 @@ Controls: Arrows / A D to move, Space / W / Up to jump.
 2. In Render: New > Blueprint, pick the repo. It reads `render.yaml`.
 3. Deploy. The URL is `https://let-2d-platformer.onrender.com` (or similar).
 
-The free plan sleeps after ~15 min idle; the first visit then takes 30-60 s to wake it. Open the URL before class.
-The client uses `wss://` automatically on HTTPS.
+The free plan sleeps after ~15 min idle; the first visit then takes 30-60 s to wake it. The client keeps retrying the connection and shows "Reconectando…" meanwhile.

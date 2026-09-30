@@ -1,31 +1,49 @@
 // Starts nothing itself: run `npm start` first, then `npm test`.
 import { WebSocket } from 'ws';
-import { stepPlayer, spawnPoint } from '../shared/game.js';
+import { stepPlayer, newBody, spawnPoint, POIS, PLAYER_H, TILE } from '../shared/game.js';
 
-// 1) physics: player dropped from spawn must land and stay on solid ground
+// 1) physics: a body dropped at spawn lands, runs right and stays on the ground
 const s = spawnPoint();
-const p = { x: s.x, y: s.y, vx: 0, vy: 0, onGround: false, input: { left: false, right: true, jump: false } };
-for (let i = 0; i < 600; i++) stepPlayer(p, 1 / 60);
-console.log('physics: y=%d onGround=%s x=%d', p.y, p.onGround, p.x);
+const p = newBody(s.x, s.y);
+for (let i = 0; i < 240; i++) stepPlayer(p, { right: true }, 1 / 120);
+console.log('physics: y=%d onGround=%s x=%d', p.y, p.onGround, Math.round(p.x));
 if (!p.onGround) throw new Error('player did not land');
 
-// 2) two clients see each other
+// 2) every POI stands on real ground
+for (const poi of POIS) if (poi.row == null) throw new Error(`POI ${poi.id} has no ground`);
+
+// 3) two clients see each other, movement relays, teleport cheats are rejected
 const url = `ws://localhost:${process.env.PORT || 3000}/ws`;
-const open = (name) => new Promise((res) => {
+const open = (name, char) => new Promise((res) => {
   const ws = new WebSocket(url); const last = {};
-  ws.on('open', () => ws.send(JSON.stringify({ t: 'join', name })));
-  ws.on('message', (d) => { const m = JSON.parse(d); if (m.t === 'state') last.state = m.p; if (m.t === 'welcome') last.id = m.id; });
-  res({ ws, last });
+  ws.on('open', () => { ws.send(JSON.stringify({ t: 'join', name, char })); res({ ws, last }); });
+  ws.on('message', (d) => {
+    const m = JSON.parse(d);
+    if (m.t === 'state') last.state = m.p;
+    if (m.t === 'welcome') last.id = m.id;
+    if (m.t === 'pos') last.snapped = true;
+  });
 });
-const a = await open('Ana'), b = await open('Beto');
-b.ws.on('open', () => b.ws.send(JSON.stringify({ t: 'input', left: false, right: true, jump: false })));
-await new Promise((r) => setTimeout(r, 1000));
-const names = a.last.state.map((x) => x.name).sort();
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const a = await open('Ana', 'frog'), b = await open('Beto', 'robot');
+await wait(300);
+b.ws.send(JSON.stringify({ t: 's', x: s.x + 20, y: s.y, vx: 200, vy: 0, g: 1, f: 1 }));
+await wait(400);
+const names = a.last.state.map((x) => x.n).sort();
 console.log('client A sees:', names.join(', '));
 if (names.join() !== 'Ana,Beto') throw new Error('sync failed');
-const beto = a.last.state.find((x) => x.name === 'Beto');
-const ana = a.last.state.find((x) => x.name === 'Ana');
-console.log('Beto moved right relative to Ana:', beto.x > ana.x);
+const beto = a.last.state.find((x) => x.n === 'Beto');
+console.log('Beto char=%s moved=%s', beto.c, beto.x > s.x + 10);
+if (beto.c !== 'robot' || !(beto.x > s.x + 10)) throw new Error('relay failed');
+b.ws.send(JSON.stringify({ t: 's', x: s.x + 3000, y: s.y, vx: 0, vy: 0, g: 1, f: 1 }));
+await wait(200);
+console.log('teleport rejected:', !!b.last.snapped);
+if (!b.last.snapped) throw new Error('teleport not rejected');
+// legit respawn teleport onto the home ground is allowed
+b.last.snapped = false;
+b.ws.send(JSON.stringify({ t: 's', tp: 1, x: POIS[0].x, y: POIS[0].row * TILE - PLAYER_H, vx: 0, vy: 0, g: 1, f: 1 }));
+await wait(200);
+if (b.last.snapped) throw new Error('respawn teleport rejected');
 a.ws.close(); b.ws.close();
 console.log('OK');
 process.exit(0);
