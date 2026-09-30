@@ -79,8 +79,12 @@ export function createParty({ ui, net, profile, game }) {
   const shownPeople = new Set();
   function renderLobby(p) {
     const show = p && p.phase === 'lobby' && isMember(p);
+    ui.inLobby = !!show; // the world stops listening to controls while the lobby is up
     if (!show) {
-      if (!lobby.classList.contains('hidden')) { lobby.classList.add('closing'); setTimeout(() => lobby.classList.add('hidden'), 250); }
+      if (!lobby.classList.contains('hidden')) {
+        lobby.classList.add('closing'); setTimeout(() => lobby.classList.add('hidden'), 250);
+        if (!st.sceneKey && !(p && p.phase === 'playing' && isMember(p))) ui.showTouch(true); // left or cancelled: back to the world
+      }
       shownPeople.clear();
       return;
     }

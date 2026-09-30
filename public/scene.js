@@ -258,7 +258,7 @@ export class WorldScene extends Phaser.Scene {
     this.keys = kb.addKeys('LEFT,RIGHT,UP,DOWN,SPACE,A,D,W,S,E,ENTER');
     kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT');
     kb.on('keydown', (e) => {
-      if (this.ui.modalOpen) return;
+      if (this.ui.modalOpen || this.ui.inLobby) return;
       if (['Space', 'ArrowUp', 'KeyW'].includes(e.code) && !e.repeat) this.jumpLatch = true;
       if ((e.code === 'KeyE' || e.code === 'Enter') && !e.repeat) this.interact();
       const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
@@ -282,7 +282,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   readInput() {
-    if (this.frozen || this.respawning) return { left: false, right: false, jump: false, down: false };
+    if (this.frozen || this.respawning || this.ui.inLobby) return { left: false, right: false, jump: false, down: false };
     const k = this.keys, t = this.ui.touch;
     const held = k.UP.isDown || k.W.isDown || k.SPACE.isDown || t.jump;
     return {

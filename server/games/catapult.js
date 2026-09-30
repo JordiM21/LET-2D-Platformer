@@ -7,7 +7,7 @@ import { ranked, num } from './util.js';
 const { Engine, Bodies, Body, Composite, Events, Vector } = Matter;
 const STEP_MS = 1000 / 60;
 const COUNTDOWN = 3;
-const CROWN_HP = 7;
+const CROWN_HP = 5;
 const BALL_LIFE = 7;
 
 export class CatapultGame {
