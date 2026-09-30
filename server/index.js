@@ -13,6 +13,7 @@ const MAX_PLAYERS = 16;
 const COLORS = ['#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45'];
 
 const app = express();
+app.get('/healthz', (req, res) => res.send('ok'));
 app.use(express.static(path.join(ROOT, 'public')));
 app.use('/shared', express.static(path.join(ROOT, 'shared')));
 app.use('/vendor', express.static(path.join(ROOT, 'node_modules/phaser/dist')));
@@ -31,6 +32,8 @@ function respawn(p) {
 
 wss.on('connection', (ws) => {
   let player = null;
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
 
   ws.on('message', (data) => {
     let msg;
@@ -74,5 +77,14 @@ setInterval(() => {
   });
   for (const ws of wss.clients) if (ws.readyState === 1) ws.send(msg);
 }, 1000 / SEND_HZ);
+
+// Heartbeat: keeps idle connections open through Render's proxy and drops dead ones.
+setInterval(() => {
+  for (const ws of wss.clients) {
+    if (!ws.isAlive) { ws.terminate(); continue; }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, 30000);
 
 server.listen(PORT, () => console.log(`LET platformer on http://localhost:${PORT}`));

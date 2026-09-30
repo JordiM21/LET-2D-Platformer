@@ -12,3 +12,12 @@ Controls: Arrows / A D to move, Space / W / Up to jump.
 - `server/index.js`: 60 Hz simulation, 30 Hz snapshots
 - `public/`: name menu (HTML) and Phaser scene: input (keyboard + touch buttons), rendering, camera
 - Art is generated in code (`makeTextures` in `public/main.js`); swap for real sprites with `this.load`
+
+## Deploy on Render (free)
+
+1. Push this repo to GitHub.
+2. In Render: New > Blueprint, pick the repo. It reads `render.yaml`.
+3. Deploy. The URL is `https://let-2d-platformer.onrender.com` (or similar).
+
+The free plan sleeps after ~15 min idle; the first visit then takes 30-60 s to wake it. Open the URL before class.
+The client uses `wss://` automatically on HTTPS.
