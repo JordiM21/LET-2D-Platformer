@@ -14,6 +14,7 @@ export class Rig {
     this.phase = 0; this.t = Math.random() * 10;
     this.blinkIn = 1 + Math.random() * 3; this.blink = 0;
     this.lastStep = 0;
+    this.still = 0; // seconds standing still; long enough and they doze off
 
     this.shadow = scene.add.image(0, 0, 'shadow').setScale(S).setDepth(19);
     this.root = scene.add.container(0, 0).setDepth(isMe ? 31 : 30);
@@ -67,6 +68,8 @@ export class Rig {
     this.flip += (this.facing - this.flip) * Math.min(1, dt * 22);
 
     const speed = Math.abs(vx) / PHYS.maxRun;
+    this.still = onGround && speed < 0.05 ? this.still + dt : 0;
+    this.updateSleep();
     let bob = 0, breathe = 1, leanTarget = 0;
     let fl = { x: -6, y: -3 }, fr = { x: 6, y: -3 };
     if (!onGround) {
@@ -99,12 +102,15 @@ export class Rig {
     this.blinkIn -= dt;
     if (this.blinkIn <= 0) { this.blink = 0.14; this.blinkIn = 2 + Math.random() * 3.5; }
     this.blink = Math.max(0, this.blink - dt);
-    const lid = this.blink > 0 ? 0.15 : 1;
+    const asleep = this.still > 14;
+    const lid = asleep ? 0.12 : this.blink > 0 ? 0.15 : 1;
     const lookY = onGround ? 0 : Math.max(-1.2, Math.min(1.4, vy / 500));
     this.eyePos.forEach(([ex, ey], i) => {
       const e = this.eyes[i];
       e.white.setPosition(ex, ey).setScale(S, S * lid);
-      e.pupil.setPosition(ex + 1 + speed * 0.6, ey + 0.3 + lookY).setScale(S, S * lid);
+      // bored after a few seconds: glance around
+      const glance = this.still > 5 && !asleep ? Math.sin(this.t * 1.3) * 1.3 : 0;
+      e.pupil.setPosition(ex + 1 + speed * 0.6 + glance, ey + 0.3 + lookY).setScale(S, S * lid);
     });
 
     // label stays upright and doesn't squash
@@ -121,6 +127,21 @@ export class Rig {
     }
   }
 
+  updateSleep() {
+    const sc = this.scene;
+    if (this.still > 14 && !this.zzz) {
+      this.zzz = sc.add.text(20, -30, '💤', { fontSize: '16px' }).setOrigin(0.5).setResolution(3).setScale(0);
+      this.root.add(this.zzz);
+      sc.tweens.add({ targets: this.zzz, scale: 1, duration: 400, ease: 'Back.easeOut' });
+      sc.tweens.add({ targets: this.zzz, y: -42, x: 26, alpha: 0.4, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    } else if (this.still === 0 && this.zzz) {
+      const z = this.zzz; this.zzz = null;
+      sc.tweens.killTweensOf(z);
+      sc.tweens.add({ targets: z, scale: 0, duration: 150, onComplete: () => z.destroy() });
+      this.kick(0.75, 1.3); // wake-up hop
+    }
+  }
+
   emote(e) {
     const sc = this.scene;
     if (this.bubble) this.bubble.destroy();
@@ -131,6 +152,7 @@ export class Rig {
     this.root.add(c);
     this.bubble = c;
     this.kick(1.25, 0.8);
+    this.still = 0; this.updateSleep();
     sc.tweens.add({ targets: c, scale: 1, y: -90, duration: 380, ease: 'Back.easeOut' });
     sc.tweens.add({ targets: tx, angle: { from: -12, to: 12 }, duration: 260, yoyo: true, repeat: 3, ease: 'Sine.easeInOut' });
     sc.tweens.add({
@@ -141,5 +163,8 @@ export class Rig {
 
   setVisible(v) { this.root.setVisible(v); this.shadow.setVisible(v); }
 
-  destroy() { this.root.destroy(); this.shadow.destroy(); }
+  destroy() {
+    this.scene.tweens.killTweensOf([this.zzz, this.bubble, ...(this.bubble?.list || [])].filter(Boolean));
+    this.root.destroy(); this.shadow.destroy();
+  }
 }

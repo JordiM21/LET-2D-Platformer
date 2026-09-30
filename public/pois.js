@@ -45,7 +45,7 @@ export const POI_CONTENT = {
           ${ctx.online.map((p, i) => `<span class="person${p.id === ctx.myId ? ' me' : ''}" style="animation-delay:${i * 0.05}s" data-char="${esc(p.c)}"><canvas></canvas>${esc(p.n)}${p.id === ctx.myId ? ' (tú)' : ''}</span>`).join('')}
         </div>
       </div>
-      <p class="note">💡 Pulsa <b>1-4</b> (o los botones) para saludar a tus amigos con un emoji.</p>
+      <p class="note">💡 ${ctx.isTouch ? 'Toca los botones de emoji' : 'Pulsa <b>1-4</b>'} para saludar a tus amigos.</p>
       <div class="cards">
         ${locked('🎉', 'Fiesta de inglés', 'Eventos con todos los alumnos')}
         ${locked('🧑‍🏫', 'Clase en vivo', 'Aquí te reunirás con tu profe')}

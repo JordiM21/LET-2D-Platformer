@@ -170,7 +170,7 @@ export function createUI(profile) {
     $('modalTitle').textContent = poi.name;
     $('modalSub').textContent = c.sub;
     const ctx = {
-      ...extra, profile, progress, sfx,
+      ...extra, profile, progress, sfx, isTouch,
       changeChar: (id) => { profile.char = id; drawMe(); ui.onCharChange?.(id); sfx.select(); saveProfile(profile); },
     };
     $('modalBody').innerHTML = c.body(ctx);

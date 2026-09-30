@@ -49,6 +49,7 @@ export class WorldScene extends Phaser.Scene {
     this.nearPoi = null; this.starCombo = 0; this.lastStarAt = 0; this.dustT = 0;
     this.sendT = 0; this.lastSent = ''; this.lastSentAt = 0; this.mapT = 0;
 
+    this.zoomBoost = 1; this.baseZoom = 1;
     this.camX = s.x; this.camY = s.y - 40; this.lookX = 0; this.camGroundY = s.y;
     this.onResize();
     this.cam.centerOn(this.camX, this.camY);
@@ -270,7 +271,7 @@ export class WorldScene extends Phaser.Scene {
       this.profile.char = c; this.me.setChar(c); this.net.send({ t: 'char', char: c });
       this.fxConfetti.explode(24, this.body.x + PLAYER_W / 2, this.body.y);
     };
-    this.ui.onModalClose = () => { this.frozen = false; this.jumpLatch = false; };
+    this.ui.onModalClose = () => { this.frozen = false; this.jumpLatch = false; this.zoomTo(1); };
   }
 
   readInput() {
@@ -524,6 +525,11 @@ export class WorldScene extends Phaser.Scene {
       this.lastStarAt = now;
       sfx.star(this.starCombo);
       this.fxSpark.explode(12, s.x, s.y);
+      const plus = this.w(this.add.text(s.x, s.y - 10, '+1', {
+        fontFamily: 'Fredoka, sans-serif', fontSize: '16px', fontStyle: '700', color: '#FFC83D', stroke: '#8A310A', strokeThickness: 4,
+      }).setOrigin(0.5).setResolution(3).setDepth(37).setScale(0.4));
+      this.tweens.add({ targets: plus, scale: 1 + Math.min(this.starCombo, 5) * 0.12, y: s.y - 44, duration: 420, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: plus, alpha: 0, delay: 450, duration: 250, onComplete: () => plus.destroy() });
       this.tweens.add({ targets: [s.spr, s.glow], scale: S * 1.8, alpha: 0, duration: 220, ease: 'Quad.easeOut' });
       const v = this.cam.worldView, z = this.cam.zoom;
       this.ui.collectStar((s.x - v.x) * z, (s.y - v.y) * z);
@@ -560,6 +566,16 @@ export class WorldScene extends Phaser.Scene {
     this.frozen = true;
     this.me.kick(1.2, 0.85);
     this.ui.openPoi(this.nearPoi, { online: this.online || [], myId: this.net.id });
+    this.zoomTo(1.15);
+  }
+
+  // gentle camera push-in while a place is open
+  zoomTo(v) {
+    this.tweens.killTweensOf(this);
+    this.tweens.add({
+      targets: this, zoomBoost: v, duration: v > 1 ? 600 : 450, ease: v > 1 ? 'Cubic.easeOut' : 'Back.easeOut',
+      onUpdate: () => this.cam.setZoom(this.baseZoom * this.zoomBoost),
+    });
   }
 
   updateLife(dt, time, px, py) {
@@ -611,7 +627,8 @@ export class WorldScene extends Phaser.Scene {
     // phones in landscape get a closer camera so characters stay big enough to read
     let z = Phaser.Math.Clamp(H / (H < 500 ? 400 : 540), 0.8, 2.2);
     z = Math.max(z, H / WORLD_H, W / WORLD_W);
-    this.cam.setSize(W, H).setZoom(z);
+    this.baseZoom = z;
+    this.cam.setSize(W, H).setZoom(z * this.zoomBoost);
     this.bgCam.setSize(W, H);
   }
 }
