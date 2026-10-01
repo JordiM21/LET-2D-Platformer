@@ -258,10 +258,10 @@ export class WorldScene extends Phaser.Scene {
     this.keys = kb.addKeys('LEFT,RIGHT,UP,DOWN,SPACE,A,D,W,S,E,ENTER');
     kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT');
     kb.on('keydown', (e) => {
-      if (this.ui.modalOpen || this.ui.inLobby) return;
+      if (this.ui.modalOpen || this.ui.inLobby || this.ui.blocked) return;
       if (['Space', 'ArrowUp', 'KeyW'].includes(e.code) && !e.repeat) this.jumpLatch = true;
       if ((e.code === 'KeyE' || e.code === 'Enter') && !e.repeat) this.interact();
-      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
+      const n = /^Digit[1-6]$/.test(e.code) ? +e.code[5] - 1 : -1;
       if (n >= 0 && !e.repeat) this.sendEmote(n);
     });
     this.ui.onJump = () => { this.jumpLatch = true; };
@@ -282,7 +282,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   readInput() {
-    if (this.frozen || this.respawning || this.ui.inLobby) return { left: false, right: false, jump: false, down: false };
+    if (this.frozen || this.respawning || this.ui.inLobby || this.ui.blocked) return { left: false, right: false, jump: false, down: false };
     const k = this.keys, t = this.ui.touch;
     const held = k.UP.isDown || k.W.isDown || k.SPACE.isDown || t.jump;
     return {
@@ -341,7 +341,8 @@ export class WorldScene extends Phaser.Scene {
       seen.add(p.id);
       let r = this.remotes.get(p.id);
       if (!r) {
-        r = { rig: new Rig(this, this.worldLayer, p.c, p.r ? `🍎 ${p.n}` : p.n, false), buf: [], char: p.c, wasG: true, airVy: 0 };
+        const name = p.r ? `🍎 ${p.n}` : p.n;
+        r = { rig: new Rig(this, this.worldLayer, p.c, name, false), name, buf: [], char: p.c, wasG: true, airVy: 0 };
         this.remotes.set(p.id, r);
         this.spawnFx(p.x + PLAYER_W / 2, p.y + PLAYER_H, true);
       }
@@ -394,6 +395,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.updateRemotes(dt);
     this.updateCamera(dt, rx, ry);
+    this.updateOffscreen(rx);
     this.updateParallax(time);
     this.updateStars(rx, ry - PLAYER_H / 2);
     this.updatePois(rx, ry);
@@ -495,6 +497,17 @@ export class WorldScene extends Phaser.Scene {
     this.camX += (tx - this.camX) * damp(7, dt);
     this.camY += (ty - this.camY) * damp(b.onGround ? 5 : 3.5, dt);
     this.cam.centerOn(this.camX, this.camY);
+  }
+
+  // edge arrows for players beyond the left/right of the screen
+  updateOffscreen(myX) {
+    const v = this.cam.worldView, z = this.cam.zoom, out = [];
+    for (const [id, r] of this.remotes) {
+      const { x, y } = r.rig.root;
+      if (x > v.x - 12 && x < v.right + 12) continue;
+      out.push({ id, name: r.name, char: r.char, side: x < v.x ? 'l' : 'r', y: (Phaser.Math.Clamp(y - 20, v.y, v.bottom) - v.y) * z, dist: Math.abs(x - myX) });
+    }
+    this.ui.updateOffscreen(out);
   }
 
   updateParallax(time) {

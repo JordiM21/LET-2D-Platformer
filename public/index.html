@@ -70,6 +70,7 @@
   <button id="interactBtn" class="btn btn-primary interact-btn" aria-hidden="true"><span class="ib-icon"></span><span class="ib-text">¡Entrar!</span></button>
 
   <div class="emotes" id="emotes"></div>
+  <div id="offscreen" aria-hidden="true"></div>
 
 </div>
 
@@ -102,7 +103,11 @@
   </div>
 </div>
 
-<div id="rotate" class="rotate" aria-live="polite"><div class="rotate-phone">📱</div><p>Gira tu teléfono para jugar</p></div>
+<div id="rotate" class="rotate" role="alert" aria-live="assertive">
+  <div class="rotate-cue" aria-hidden="true"><span class="rotate-arrow">↺</span><div class="rotate-phone"><i></i></div></div>
+  <p>Gira tu teléfono<br><b>horizontalmente</b></p>
+  <small>para jugar en el Mundo LET</small>
+</div>
 
 <div id="wipe" class="wipe" aria-hidden="true"><div class="wipe-logo">Mundo <span>LET</span></div></div>
 

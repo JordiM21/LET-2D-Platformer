@@ -185,7 +185,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   readInput() {
-    if (this.locked || this.time.now < this.stunnedUntil) return { left: false, right: false, jump: false, down: false };
+    if (this.locked || this.ui.blocked || this.time.now < this.stunnedUntil) return { left: false, right: false, jump: false, down: false };
     const k = this.keys, t = this.ui.touch;
     return {
       left: k.LEFT.isDown || k.A.isDown || t.left,

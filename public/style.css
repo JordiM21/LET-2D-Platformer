@@ -262,17 +262,53 @@ button { font: inherit; color: inherit; }
 }
 .jump.on { transform: translateY(5px) scale(.93); background: rgba(202, 75, 21, .85); box-shadow: 0 1px 0 rgba(138, 49, 10, .55); }
 @media (max-height: 420px) { .pad { width: 164px; height: 80px; } .pad-knob { width: 52px; height: 52px; margin: -26px 0 0 -26px; } .jump { width: 92px; height: 92px; } }
+.emote.act { box-shadow: 0 4px 0 rgba(31, 26, 61, .14), inset 0 0 0 3px var(--gold); }
+
+/* edge arrows pointing at players who are off screen */
+#hud #offscreen { position: absolute; inset: 0; pointer-events: none; }
+.off {
+  position: absolute; top: 0; display: flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px 0 4px; border-radius: 999px;
+  background: rgba(255, 255, 255, .92); color: var(--navy); font-weight: 600; font-size: 13px; white-space: nowrap;
+  box-shadow: 0 3px 0 rgba(31, 26, 61, .14); animation: offIn .35s var(--spring) both;
+}
+.off.l { left: max(8px, env(safe-area-inset-left)); }
+.off.r { right: max(8px, env(safe-area-inset-right)); flex-direction: row-reverse; padding: 0 4px 0 10px; }
+.off canvas { width: 26px; height: auto; }
+.off span { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+.off b { color: var(--orange); font-size: 14px; animation: offNudgeL 1s ease-in-out infinite; }
+.off.r b { animation-name: offNudgeR; }
+.off.more { padding: 0 10px; }
+@keyframes offIn { from { opacity: 0; scale: .6; } }
+@keyframes offNudgeL { 50% { translate: -3px 0; } }
+@keyframes offNudgeR { 50% { translate: 3px 0; } }
+body.is-touch .off.l { left: max(110px, calc(env(safe-area-inset-left) + 100px)); }
+
+body.is-touch .emotes { display: grid; grid-template-columns: repeat(2, auto); }
 body.is-touch .emotes { bottom: auto; top: max(64px, calc(env(safe-area-inset-top) + 60px)); left: max(12px, env(safe-area-inset-left)); right: auto; transform: none; flex-direction: column; animation: none; }
 body.is-touch .emote { width: 42px; height: 42px; font-size: 20px; }
 body.is-touch .emote kbd { display: none; }
 body.is-touch .interact-btn { bottom: max(148px, calc(env(safe-area-inset-bottom) + 148px)); right: max(16px, env(safe-area-inset-right)); font-size: 19px; padding: 9px 20px 9px 10px; }
 
-/* portrait phones: ask to rotate */
-.rotate { display: none; position: fixed; inset: 0; z-index: 60; background: linear-gradient(180deg, #6EC3FF, var(--sky-3)); place-items: center; align-content: center; gap: 12px; text-align: center; font-family: var(--display); font-weight: 600; font-size: 24px; color: var(--navy); }
+/* touch screens held upright: full-screen wall until the device is turned sideways (toggled from ui.js) */
+.rotate {
+  display: none; position: fixed; inset: 0; z-index: 1000; padding: 24px; touch-action: none;
+  background: linear-gradient(180deg, #6EC3FF, var(--sky-3)); place-items: center; align-content: center; gap: 14px;
+  text-align: center; font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.2; color: var(--navy);
+}
+body.rotate-block .rotate { display: grid; }
+body.rotate-block { overflow: hidden; }
 .rotate p { margin: 0; }
-.rotate-phone { font-size: 72px; animation: rotatePhone 2s var(--spring) infinite; }
-@keyframes rotatePhone { 0%, 20% { transform: rotate(0); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
-@media (orientation: portrait) and (max-width: 700px) { body.is-touch.in-game .rotate { display: grid; } }
+.rotate p b { display: inline-block; margin-top: 8px; padding: 4px 16px; border-radius: 999px; background: var(--orange); color: #fff; font-size: 30px; }
+.rotate small { font-family: var(--body); font-size: 16px; font-weight: 700; }
+.rotate-cue { position: relative; width: 170px; height: 170px; display: grid; place-items: center; margin-bottom: 8px; }
+.rotate-phone {
+  width: 64px; height: 112px; border-radius: 14px; background: var(--navy); padding: 7px 5px; box-sizing: border-box;
+  box-shadow: 0 8px 0 rgba(31, 26, 61, .2); animation: rotatePhone 2.4s var(--spring) infinite;
+}
+.rotate-phone i { display: block; width: 100%; height: 100%; border-radius: 8px; background: linear-gradient(270deg, #A9DDFF, #8BE06B 72%, #D99A5B 72%); } /* sky lands on top once turned */
+.rotate-arrow { position: absolute; top: -6px; right: 4px; font-size: 48px; font-weight: 700; color: var(--orange); animation: rotateArrow 2.4s ease-in-out infinite; }
+@keyframes rotatePhone { 0%, 15% { transform: rotate(0); } 45%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+@keyframes rotateArrow { 0%, 15% { opacity: 1; transform: rotate(0); } 45% { opacity: 1; transform: rotate(-60deg); } 55%, 100% { opacity: 0; transform: rotate(-60deg); } }
 body.is-touch .hint { display: none; }
 
 /* flying star (collected -> counter) */

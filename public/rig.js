@@ -6,6 +6,23 @@ import { BODY_W, BODY_BASE, eyesFor } from './characters.js';
 
 const S = 1 / RES;
 
+// full-body emotes, keyed by EMOTES index. Each returns pose offsets for time t (seconds into the act).
+const ACTS = {
+  4: { dur: 2.6, pose: (t) => { // dance: hop on the beat, sway, kick feet
+    const b = Math.sin(t * 10);
+    return { bob: -Math.abs(b) * 7, angle: Math.sin(t * 5) * 16, x: Math.sin(t * 5) * 4, sx: 1, sy: 1 + b * 0.08,
+      fl: { x: -7, y: -3 - Math.max(0, b) * 7 }, fr: { x: 7, y: -3 - Math.max(0, -b) * 7 } };
+  } },
+  5: { dur: 3.4, pose: (t, f) => { // play dead: topple face-first (tails stay up), thud, lie still (one foot twitches), get back up
+    const fall = Math.min(1, t / 0.3) ** 2, rise = Math.min(1, Math.max(0, (t - 3) / 0.4));
+    const k = fall * (1 - rise);
+    const thud = t > 0.3 && t < 0.7 ? Math.sin((t - 0.3) * 24) * (0.7 - t) * 12 : 0;
+    const twitch = t > 1.6 && t < 2 ? Math.abs(Math.sin(t * 30)) * 4 : 0;
+    return { bob: -15 * k, angle: (90 * k - thud) * f, x: 0, sx: 1, sy: 1 - (rise > 0 ? 0 : thud * 0.01), dead: k > 0.5,
+      fl: { x: -6, y: -3 }, fr: { x: 6, y: -3 - twitch } };
+  } },
+};
+
 export class Rig {
   // map: tile map for the ground shadow (the world by default; minigame arenas pass their own)
   constructor(scene, layer, char, name, isMe, map = WORLD_MAP) {
@@ -94,10 +111,22 @@ export class Rig {
 
     // stretch with vertical speed while airborne
     const air = onGround ? 0 : Math.min(0.22, Math.abs(vy) / 4200);
-    const sy = this.sy * breathe * (1 + air), sx = this.sx / (1 + air * 0.8);
+    let sy = this.sy * breathe * (1 + air), sx = this.sx / (1 + air * 0.8);
+
+    // full-body emote overrides the idle pose; moving or jumping cancels it
+    let ox = 0, angle = this.lean, dead = false;
+    if (this.act) {
+      this.act.t += dt;
+      if (!onGround || speed > 0.08 || this.act.t > ACTS[this.act.e].dur) this.act = null;
+      else {
+        const p = ACTS[this.act.e].pose(this.act.t, this.facing);
+        bob = p.bob; angle += p.angle; ox = p.x; sx *= p.sx; sy *= p.sy; fl = p.fl; fr = p.fr; dead = p.dead;
+        this.still = 0;
+      }
+    }
 
     this.root.setPosition(x, y);
-    this.rig.setPosition(0, bob).setScale(sx * this.flip, sy).setAngle(this.lean);
+    this.rig.setPosition(ox, bob).setScale(sx * this.flip, sy).setAngle(angle);
     this.footL.setPosition(fl.x, fl.y); this.footR.setPosition(fr.x, fr.y);
 
     // eyes: blink + look where we're going
@@ -105,7 +134,7 @@ export class Rig {
     if (this.blinkIn <= 0) { this.blink = 0.14; this.blinkIn = 2 + Math.random() * 3.5; }
     this.blink = Math.max(0, this.blink - dt);
     const asleep = this.still > 14;
-    const lid = asleep ? 0.12 : this.blink > 0 ? 0.15 : 1;
+    const lid = asleep || dead ? 0.12 : this.blink > 0 ? 0.15 : 1;
     const lookY = onGround ? 0 : Math.max(-1.2, Math.min(1.4, vy / 500));
     this.eyePos.forEach(([ex, ey], i) => {
       const e = this.eyes[i];
@@ -116,7 +145,8 @@ export class Rig {
     });
 
     // label stays upright and doesn't squash
-    this.label.setY(-50 + bob - (sy - 1) * 20);
+    // (lying down lowers it instead of following the rotation offset)
+    this.label.setY(dead ? -40 : -50 + bob - (sy - 1) * 20);
 
     // shadow on the ground below
     const col = Math.floor(x / TILE);
@@ -154,6 +184,7 @@ export class Rig {
     this.root.add(c);
     this.bubble = c;
     this.kick(1.25, 0.8);
+    this.act = ACTS[e] ? { e, t: 0 } : null;
     this.still = 0; this.updateSleep();
     sc.tweens.add({ targets: c, scale: 1, y: -90, duration: 380, ease: 'Back.easeOut' });
     sc.tweens.add({ targets: tx, angle: { from: -12, to: 12 }, duration: 260, yoyo: true, repeat: 3, ease: 'Sine.easeInOut' });

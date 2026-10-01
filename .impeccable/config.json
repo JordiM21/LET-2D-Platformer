@@ -1,0 +1,29 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "var(--spring)",
+        "createdAt": "2026-10-01T08:34:14.100Z",
+        "reason": "Claude: --spring is the project-wide motion token for this kids' game's deliberately bouncy style (commit e5cc3cd 'juicy movement'); predates this session"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "iconwobble",
+        "createdAt": "2026-10-01T08:46:02.643Z",
+        "reason": "Claude: iconWobble is a gentle rotate/scale keyframe run with ease-in-out, not a bounce/elastic timing function; predates this session"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "public/index.html"
+        ],
+        "createdAt": "2026-10-01T08:47:53.805Z",
+        "reason": "Claude: only hit is .menu-card, padding clamp(18px, 3.5vw, 36px), measured 18px rendered with children inset 16-18px; static detector can't resolve clamp()"
+      }
+    ]
+  }
+}

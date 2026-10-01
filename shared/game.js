@@ -44,7 +44,8 @@ export const CHARACTERS = [
 ];
 export const CHAR_IDS = CHARACTERS.map((c) => c.id);
 
-export const EMOTES = ['👋', '❤️', '⭐', '😂'];
+// the last two are full-body actions (see ACTS in public/rig.js)
+export const EMOTES = ['👋', '❤️', '⭐', '😂', '🕺', '💀'];
 
 // ---------------------------------------------------------------- world
 

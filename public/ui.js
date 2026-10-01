@@ -7,6 +7,22 @@ import { sfx } from './audio.js';
 const $ = (id) => document.getElementById(id);
 const PKEY = 'letWorldProgress';
 
+// touch screens held upright get a full-screen "rotate me" wall and no input until turned sideways
+const portrait = matchMedia('(orientation: portrait)');
+const touchDevice = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+export let rotateBlocked = false;
+let onRotateBlock = null;
+function syncOrientation() {
+  const was = rotateBlocked;
+  rotateBlocked = touchDevice && portrait.matches;
+  document.body.classList.toggle('rotate-block', rotateBlocked);
+  if (rotateBlocked) { document.activeElement?.blur?.(); onRotateBlock?.(); }
+  // mobile browsers report the new size late after turning: re-measure once it settles
+  if (was && !rotateBlocked) for (const ms of [100, 400]) setTimeout(() => window.__game?.scale.refresh(), ms);
+}
+portrait.addEventListener('change', syncOrientation);
+syncOrientation();
+
 function loadProgress() {
   try {
     const p = JSON.parse(localStorage.getItem(PKEY)) || {};
@@ -24,7 +40,9 @@ export function createUI(profile) {
     isTouch, progress, modalOpen: false,
     touch: { left: false, right: false, jump: false, down: false },
     onJump: null, onInteract: null, onEmote: null, onCharChange: null, onModalClose: null,
+    get blocked() { return rotateBlocked; },
   };
+  onRotateBlock = () => { Object.keys(ui.touch).forEach((k) => { ui.touch[k] = false; }); };
 
   // ---- top bar
   $('meName').textContent = profile.name;
@@ -59,6 +77,44 @@ export function createUI(profile) {
       d.style.display = o ? '' : 'none';
       if (o) { d.style.left = `${o.x * 100}%`; d.style.background = CHAR_BY_ID[o.char]?.body || '#3A3370'; }
     });
+  };
+
+  // ---- edge arrows for off-screen players: stacked per side so they never overlap
+  const offBox = $('offscreen'), offEls = new Map(), GAP = 44;
+  const more = { l: mk('off l more'), r: mk('off r more') };
+  function mk(cls) { const e = document.createElement('div'); e.className = cls; offBox.appendChild(e); return e; }
+  ui.updateOffscreen = (list) => {
+    const top = 70, bottom = innerHeight - 140, fit = Math.max(1, Math.floor((bottom - top) / GAP) + 1);
+    const live = new Set();
+    for (const side of ['l', 'r']) {
+      // nearest first; whoever doesn't fit collapses into a "+N" chip
+      const all = list.filter((o) => o.side === side).sort((a, b) => a.dist - b.dist);
+      const shown = all.length > fit ? all.slice(0, fit - 1) : all;
+      const extra = all.length - shown.length;
+      const items = shown.map((o) => ({ o, y: Math.max(top, Math.min(bottom, o.y)) }));
+      if (extra) items.push({ o: null, y: bottom });
+      items.sort((a, b) => a.y - b.y);
+      for (let i = 1; i < items.length; i++) items[i].y = Math.max(items[i].y, items[i - 1].y + GAP);
+      for (let i = items.length - 1; i >= 0; i--) items[i].y = Math.min(items[i].y, i === items.length - 1 ? bottom : items[i + 1].y - GAP);
+      more[side].style.display = extra ? '' : 'none';
+      for (const { o, y } of items) {
+        let el = more[side];
+        if (o) {
+          live.add(o.id);
+          el = offEls.get(o.id);
+          if (!el) { el = mk('off'); el.innerHTML = '<canvas></canvas><span></span><b></b>'; offEls.set(o.id, el); }
+          if (el.dataset.k !== o.char + o.name + side) {
+            el.dataset.k = o.char + o.name + side;
+            el.className = `off ${side}`;
+            el.querySelector('span').textContent = o.name;
+            el.querySelector('b').textContent = side === 'l' ? '◀' : '▶';
+            drawCharacter(el.querySelector('canvas'), CHAR_BY_ID[o.char], 0.6);
+          }
+        } else el.innerHTML = `<b>${side === 'l' ? '◀' : '▶'}</b><span>+${extra}</span>`;
+        el.style.transform = `translateY(${y - 18}px)`;
+      }
+    }
+    for (const [id, el] of offEls) if (!live.has(id)) { el.remove(); offEls.delete(id); }
   };
 
   // ---- online + status
@@ -137,7 +193,7 @@ export function createUI(profile) {
   // ---- emotes
   EMOTES.forEach((e, i) => {
     const b = document.createElement('button');
-    b.className = 'emote'; b.innerHTML = `${e}<kbd>${i + 1}</kbd>`;
+    b.className = i >= 4 ? 'emote act' : 'emote'; b.innerHTML = `${e}<kbd>${i + 1}</kbd>`;
     b.setAttribute('aria-label', `Emoji ${e}`);
     b.onclick = () => ui.onEmote?.(i);
     $('emotes').appendChild(b);
